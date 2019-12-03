@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<meta charset = utf8>
+<html>
+   
+<head>
+    <title>Example with HW button</title>
+</head>    
+
+<body>
+    
+<div>
+<canvas id="canvas1" width ="200" height = "100" style="border: 1px dashed #00c3c3;"></canvas>    
+</div>   
+   
+<div id="print1"></div>
+
+<script type="text/javascript">
+"use strict"; // in order to use clasess
+
+var divElement = document.getElementById("print1"); // var for div el.
+
+function log(msg) {
+    divElement.innerHTML += "<div>" + msg + "</div>"; // print to div
+}
+
+var ws = new WebSocket('ws://172.16.22.150:8888/');
+ 
+ var c = document.getElementById("canvas1");
+var ctx = c.getContext("2d");
+
+
+
+ 
+ws.onmessage = function (event) {
+        log(event.data);
+   if (event.data=='1'){
+       ctx.fillStyle="red";
+    ctx.fillRect(0, 0, 200, 200);}
+    else if (event.data=='0'){
+       ctx.fillStyle="green";
+    ctx.fillRect(0, 0, 200, 200);
+    }
+}
+
+ws.onclose = function (value) {
+    log("Connection closed.");
+}
+
+</script>
+   
+</body>    
+   
+</html>
