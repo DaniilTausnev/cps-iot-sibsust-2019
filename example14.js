@@ -23,6 +23,9 @@ wss.sendToLastWs = function sendToLastWs(data) {
 
 var messageJSON;
 
+var controlAlgorithmStartedFlag = 0; // variable for indicating weather the Alg has benn sta.
+var intervalCtrl; // var for setInterval in global scope
+
 console.log("Starting the code");
 
 var board = new firmata.Board("/dev/ttyACM0", function(){
@@ -36,7 +39,7 @@ var board = new firmata.Board("/dev/ttyACM0", function(){
 });
 
 function handler(req, res) {
-    fs.readFile(__dirname + "/example13.html",
+    fs.readFile(__dirname + "/example14.html",
     function (err, data) {
         if (err) {
             res.writeHead(500, {"Content-Type": "text/plain"});
@@ -51,7 +54,7 @@ var desiredValue = 0; // desired value var
 var actualValue = 0; // variable for actual value (output value)
 
 var pwm;
-var factor = 0.2; // proportional factor that determines the speed of aproaching toward desired value
+var factor = 0.1; // proportional factor that determines the speed of aproaching toward desired value
 
 http.listen(8080); // server will listen on port 8080
 
@@ -71,14 +74,23 @@ board.on("ready", function() {
         ws.send(JSON.stringify(messageJSON));
         //console.log(wss.clients[1]);
         setInterval(sendValues, 40); // on 40ms we send message to client
+        
+        ws.on("message", function (msgString) { // message comes as string -> msgString
+            var msg = JSON.parse(msgString); // string from ws which comes as a string is put to JSON
+            switch(msg.type) {
+                case "startControlAlgorithm":
+                    startControlAlgorithm();
+                break;
+                case "stopControlAlgorithm":
+                    stopControlAlgorithm();                
+                break;
+            }
+        }); // end of wss.on code
+        
     }); // end of sockets.on connection
 
 }); // end of board.on(ready)
 
-function startControlAlgorithm () {
-    setInterval(function() {controlAlgorithm(); }, 30); // na 30ms call
-    console.log("Control algorithm started")
-};
 
 function controlAlgorithm () {
     pwm = factor*(desiredValue-actualValue);
@@ -89,6 +101,22 @@ function controlAlgorithm () {
     board.analogWrite(3, Math.abs(pwm));
 };
 
+function startControlAlgorithm () {
+    if (controlAlgorithmStartedFlag == 0) {
+        controlAlgorithmStartedFlag = 1;
+        intervalCtrl = setInterval(function(){controlAlgorithm();}, 30); // call the alg. on 30ms
+        console.log("Control algorithm has been started.");        
+    }
+};
+
+function stopControlAlgorithm () {
+    clearInterval(intervalCtrl); // clear the interval of control algorihtm
+    board.analogWrite(3, 0);
+    controlAlgorithmStartedFlag = 0;
+    console.log("Control algorithm has been stopped.");
+};
+
+
 function sendValues () {
-    wss.broadcast(JSON.stringify({"type": "clientReadValues", "desiredValue": desiredValue, "actualValue": actualValue}));
+   wss.broadcast(JSON.stringify({"type": "clientReadValues", "desiredValue": desiredValue, "actualValue": actualValue, "error": (desiredValue - actualValue), "pwm": (pwm).toFixed(0)}));
 };
