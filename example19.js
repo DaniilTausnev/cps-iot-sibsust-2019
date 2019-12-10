@@ -31,7 +31,7 @@ var board = new firmata.Board("/dev/ttyACM0", function(){
 });
 
 function handler(req, res) {
-    fs.readFile(__dirname + "/example17a.html",
+    fs.readFile(__dirname + "/example19.html",
     function (err, data) {
         if (err) {
             res.writeHead(500, {"Content-Type": "text/plain"});
@@ -58,6 +58,10 @@ var err = 0; // error
 var errSum = 0; // sum of errors as integral
 var dErr = 0; // difference of error
 var lastErr = 0; // to keep the value of previous error to estimate derivative
+
+var KpE = 0; // multiplication of Kp x error
+var KiIedt = 0; // multiplication of Ki x integ. of error
+var KdDe_dt = 0; // multiplication of Kd x differential of err.
 
 http.listen(8080); // server will listen on port 8080
 
@@ -108,7 +112,14 @@ function controlAlgorithm (msg) { // the parameter in the argument holds ctrlAlg
         err = desiredValue - actualValue; // error as difference between desired and actual val.
         errSum += err; // sum of errors | like integral
         dErr = err - lastErr; // difference of error
-        pwm = msg.Kp1*err+msg.Ki1*errSum+msg.Kd1*dErr; // PID expression
+
+        // we will put parts of expression for pwm to
+        // global workspace
+        KpE = msg.Kp1*err;
+        KiIedt = msg.Ki1*errSum;
+        KdDe_dt = msg.Kd1*dErr;
+        pwm = KpE + KiIedt + KdDe_dt; // we use above parts for PID expression
+
         lastErr = err; // save the value of error for next cycle to estimate the derivative
             if(pwm > pwmLimit) {pwm = pwmLimit}; // to limit the value for pwm / positive
             if(pwm < -pwmLimit) {pwm = -pwmLimit}; // to limit the value for pwm / negative
@@ -116,11 +127,6 @@ function controlAlgorithm (msg) { // the parameter in the argument holds ctrlAlg
             if (pwm < 0) {board.digitalWrite(2,0); board.digitalWrite(4,1);}; // determine direction if < 0
         board.analogWrite(3, Math.abs(pwm));
         };
-           if(actualValue<170 || actualValue>840){
-        stopControlAlgorithm();
-        board.digitalWrite(13,1);
-    }
-    else {board.digitalWrite(13,0);}
 }
 
 function startControlAlgorithm (msg) {
@@ -130,14 +136,12 @@ function startControlAlgorithm (msg) {
         err = 0; // Reset error
         errSum = 0; // Reset sum of errors as integral
         dErr = 0; // Reset difference of error
-        lastErr = 0; // Reset value whih keeps the value of previous error to estimate derivative
+        lastErr = 0; // Reset value which keeps the value of previous error to estimate derivative
         controlAlgorithmStartedFlag = 1;
         intervalCtrl = setInterval(function(){controlAlgorithm(msg);}, 30); // call the alg. on 30ms
         console.log("Control algorithm has been started.");
         messageJSON = {"type": "staticMsgToClient", "content": " No. " + msg.ctrlAlgNo + " started | " + json2txt(msg)};
         wss.broadcast(JSON.stringify(messageJSON));
-        
-      
     }
 };
 
@@ -152,7 +156,7 @@ function stopControlAlgorithm () {
 };
 
 function sendValues () {
-    wss.broadcast(JSON.stringify({"type": "clientReadValues", "desiredValue": desiredValue, "actualValue": actualValue, "error": (desiredValue - actualValue), "pwm": (pwm).toFixed(0)}));
+    wss.broadcast(JSON.stringify({"type": "clientReadValues", "desiredValue": desiredValue, "actualValue": actualValue, "error": (desiredValue - actualValue), "pwm": (pwm).toFixed(0), "err": err,"errSum": errSum, "dErr": dErr, "KpE": KpE, "KiIedt": KiIedt, "KdDe_dt": KdDe_dt}));
 };
 
 function json2txt(obj) // function to print out the json names and values
