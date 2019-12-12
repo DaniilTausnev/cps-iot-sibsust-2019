@@ -12,6 +12,17 @@ PWM: <input id="pwm" value=100 />
 <button id="buttonLeft" onClick="left()">Left</button>
 <button id="buttonRight" onClick="right()">Right</button>
 <button id="buttonStop" onClick="stop()">Stop</button>
+<br>
+</p><p/>
+
+Degrees: <input id="pwm" value=100 />  
+<button id="buttonD=0" onClick="d_0()">D=0</button>
+<button id="buttonD=45" onClick="d_45()">D=45</button>
+<button id="buttonD90" onClick="d_90()">D=90</button>
+<button id="buttonD=135" onClick="d_135()">D=135</button>
+<button id="buttonD=180" onClick="d_180()">D=180</button>
+<button id="buttonD+=10" onClick="dP()">D+=10</button>
+<button id="buttonD-=10" onClick="dM()">D-=10</button>
 
 <div id="divForPrint"></div>
 
@@ -35,7 +46,7 @@ function log(msg) { // function to print messages to div with implemented scroll
     counterOfLogs = counterOfLogs + 1; // increase the counter of logs
 }
 
-let ws = new WebSocket("ws://192.168.254.149:8888"); // create socket - connect to it
+let ws = new WebSocket("ws://172.16.22.150:8888"); // create socket - connect to it
 var messageJSON;
 
 ws.onmessage = function(event) {
@@ -71,6 +82,27 @@ function stop() {
     messageJSON = {"type": "stop", "pwm": 0};
     ws.send(JSON.stringify(messageJSON)); // we have to stringify JSON to send it over websocket    
 };
+function d_0(){
+    ws.send('0');
+}
+function d_45(){
+    ws.send('1');
+}
+function d_90(){
+    ws.send('2');
+}
+function d_135(){
+    ws.send('3');
+}
+function d_180(){
+    ws.send('4');
+}
+function dM(){
+    ws.send('6');
+}
+function dP(){
+    ws.send('5');
+}
 
 </script>
     
